@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista de Produtos</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 20px;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    form {
+      margin-top: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    input[type="text"],
+    button,
+    input[type="checkbox"] {
+      margin-bottom: 10px;
+      padding: 8px;
+    }
+
+    button {
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    table,
+    th,
+    td {
+      border: 1px solid #ddd;
+    }
+
+    th,
+    td {
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>Lista de Produtos</h1>
+
+<form id="addProductForm">
+  <label for="productDescription">Novo Produto:</label>
+  <input type="text" id="productDescription" name="productDescription" required>
+  <button type="button" onclick="saveProduct()">Adicionar Produto</button>
+  <label for="completed">Estoque:</label>
+  <input type="checkbox" id="completed" name="completed">
+</form>
+
+<table>
+  <thead>
+  <tr>
+    <th>Código</th>
+    <th>Nome</th>
+    <th>Vencido</th>
+    <th>Ações</th>
+  </tr>
+  </thead>
+  <tbody id="productsTableBody"></tbody>
+</table>
+
+<script>
+  function saveProduct() {
+    const productDescription = document.getElementById('productDescription').value;
+    const completed = document.getElementById('completed').checked;
+
+    const newProduct = {
+      description: productDescription,
+      completed: completed,
+    };
+
+    fetch('http://localhost:8080/save', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newProduct),
+    })
+            .then(response => response.json())
+            .then(data => {
+              console.log(data);
+              updateProductsTable();
+            })
+            .catch(error => console.error('Erro:', error));
+  }
+
+  function updateProductsTable() {
+    fetch('http://localhost:8080/find')
+            .then(response => response.json())
+            .then(data => {
+              const productsTableBody = document.getElementById('productsTableBody');
+              productsTableBody.innerHTML = '';
+
+              data.forEach(product => {
+                const row = productsTableBody.insertRow();
+                row.insertCell(0).textContent = product.id;
+                row.insertCell(1).textContent = product.description;
+
+                const completionCell = row.insertCell(2);
+                completionCell.textContent = product.completed ? 'Sim' : 'Não';
+
+                const actionsCell = row.insertCell(3);
+                const completeButton = document.createElement('button');
+                completeButton.textContent = 'Marcar como Concluído';
+                completeButton.onclick = function () {
+                  markProductAsComplete(product.id);
+                };
+                actionsCell.appendChild(completeButton);
+              });
+            })
+            .catch(error => console.error('Erro:', error));
+  }
+
+  function markProductAsComplete(productId) {
+    console.log(productId);
+    fetch(`http://localhost:8080/find/${productId}`)
+            .then(response => response.json())
+            .then(product => {
+              product.completed = true;
+
+              fetch(`http://localhost:8080/alter/${productId}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(product),
+              })
+                      .then(response => response.json())
+                      .then(data => {
+                        console.log(data);
+                        updateProductsTable();
+                      })
+                      .catch(error => console.error('Erro:', error));
+            })
+            .catch(error => console.error('Erro ao obter o produto:', error));
+  }
+
+  updateProductsTable();
+</script>
+
+</body>
+
+</html>
